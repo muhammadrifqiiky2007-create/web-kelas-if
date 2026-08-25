@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut, User, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, collection } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -35,7 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
 
-  // Deteksi info perangkat
   const getDeviceName = () => {
     const ua = navigator.userAgent;
     if (/android/i.test(ua)) return 'Android Device';
@@ -46,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'Unknown Device';
   };
 
-  // Fungsi pembersihan total penyimpanan lokal
+  // Fungsi pembersihan total tanpa sisa
   const clearLocalAuthData = () => {
     localStorage.removeItem('admin_session_id');
     localStorage.clear();
@@ -54,9 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Memaksa persitensi auth hanya untuk sesi browser aktif (tidak auto-login saat tab ditutup total/relocate jika dikeluarkann)
-    setPersistence(auth, browserSessionPersistence).catch(() => {});
-
     let currentSessionId = localStorage.getItem('admin_session_id');
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -69,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setSessionId(currentSessionId);
 
-        // Catat sesi di Firestore
+        // Simpan sesi di Firestore
         const sessionRef = doc(db, 'active_sessions', currentSessionId);
         await setDoc(sessionRef, {
           email: currentUser.email || 'Admin',
@@ -77,15 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastActive: serverTimestamp(),
         }, { merge: true });
 
-        // Listener jika sesi di-kick oleh admin lain
-        const unsubscribeMySession = onSnapshot(doc(db, 'active_sessions', currentSessionId), async (snapshot) => {
+        // Monitoring status kick secara real-time
+        const unsubscribeMySession = onSnapshot(doc(db, 'active_sessions', currentSessionId), (snapshot) => {
           if (!snapshot.exists()) {
-            // Langsung hentikan listener dan keluar tanpa modal/popup confirmation
+            // Langsung logout diam-diam tanpa alert() / konfirmasi
             unsubscribeMySession();
             clearLocalAuthData();
             setSessionId(null);
             setUser(null);
-            await signOut(auth);
+            signOut(auth);
           }
         });
 
@@ -102,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribeAuth();
   }, []);
 
-  // Real-time listener daftar sesi aktif
+  // Sync daftar sesi aktif untuk UI
   useEffect(() => {
     if (!user) {
       setActiveSessions([]);
@@ -120,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribeList();
   }, [user]);
 
-  // Fungsi Logout Manual tanpa konfirmasi & bersih total
   const logout = async () => {
     const currentSessionId = localStorage.getItem('admin_session_id');
     if (currentSessionId) {
@@ -132,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signOut(auth);
   };
 
-  // Fungsi Kick Sesi Admin Lain
   const kickSession = async (sessionIdToKick: string) => {
     await deleteDoc(doc(db, 'active_sessions', sessionIdToKick));
   };

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, collection } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
 
-  // Deteksi info perangkat sederhana
+  // Deteksi info perangkat
   const getDeviceName = () => {
     const ua = navigator.userAgent;
     if (/android/i.test(ua)) return 'Android Device';
@@ -46,7 +46,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'Unknown Device';
   };
 
+  // Fungsi pembersihan total penyimpanan lokal
+  const clearLocalAuthData = () => {
+    localStorage.removeItem('admin_session_id');
+    localStorage.clear();
+    sessionStorage.clear();
+  };
+
   useEffect(() => {
+    // Memaksa persitensi auth hanya untuk sesi browser aktif (tidak auto-login saat tab ditutup total/relocate jika dikeluarkann)
+    setPersistence(auth, browserSessionPersistence).catch(() => {});
+
     let currentSessionId = localStorage.getItem('admin_session_id');
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -59,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setSessionId(currentSessionId);
 
-        // Catat sesi aktif di Firestore
+        // Catat sesi di Firestore
         const sessionRef = doc(db, 'active_sessions', currentSessionId);
         await setDoc(sessionRef, {
           email: currentUser.email || 'Admin',
@@ -67,13 +77,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastActive: serverTimestamp(),
         }, { merge: true });
 
-        // Pantau jika sesi ini di-kick admin lain
-        const unsubscribeMySession = onSnapshot(doc(db, 'active_sessions', currentSessionId), (snapshot) => {
+        // Listener jika sesi di-kick oleh admin lain
+        const unsubscribeMySession = onSnapshot(doc(db, 'active_sessions', currentSessionId), async (snapshot) => {
           if (!snapshot.exists()) {
-            signOut(auth);
-            localStorage.removeItem('admin_session_id');
+            // Langsung hentikan listener dan keluar tanpa modal/popup confirmation
+            unsubscribeMySession();
+            clearLocalAuthData();
             setSessionId(null);
-            alert('Akses Anda telah dikeluarkan (kick) oleh Admin lain.');
+            setUser(null);
+            await signOut(auth);
           }
         });
 
@@ -81,8 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         if (currentSessionId) {
           await deleteDoc(doc(db, 'active_sessions', currentSessionId)).catch(() => {});
-          localStorage.removeItem('admin_session_id');
         }
+        clearLocalAuthData();
         setSessionId(null);
       }
     });
@@ -108,15 +120,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribeList();
   }, [user]);
 
+  // Fungsi Logout Manual tanpa konfirmasi & bersih total
   const logout = async () => {
     const currentSessionId = localStorage.getItem('admin_session_id');
     if (currentSessionId) {
       await deleteDoc(doc(db, 'active_sessions', currentSessionId)).catch(() => {});
-      localStorage.removeItem('admin_session_id');
     }
+    clearLocalAuthData();
+    setSessionId(null);
+    setUser(null);
     await signOut(auth);
   };
 
+  // Fungsi Kick Sesi Admin Lain
   const kickSession = async (sessionIdToKick: string) => {
     await deleteDoc(doc(db, 'active_sessions', sessionIdToKick));
   };

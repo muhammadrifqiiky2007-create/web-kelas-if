@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Class Member",
+      "description": "A member of the class",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "photoData": { "type": "string", "maxLength": 800000 },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["name", "photoData", "createdAt", "updatedAt"]
+    },
+    "GalleryItem": {
+      "title": "Gallery Item",
+      "description": "A photo and description of a class event",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 500 },
+        "photoData": { "type": "string", "maxLength": 800000 },
+        "date": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["title", "description", "photoData", "date", "createdAt", "updatedAt"]
+    },
+    "ScheduleItem": {
+      "title": "Schedule Item",
+      "description": "A class schedule entry",
+      "type": "object",
+      "properties": {
+        "day": { "type": "string", "maxLength": 20 },
+        "time": { "type": "string", "maxLength": 50 },
+        "course": { "type": "string", "maxLength": 150 },
+        "lecturer": { "type": "string", "maxLength": 150 },
+        "room": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["day", "time", "course", "lecturer", "room", "createdAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Admin user who can manage the class profile",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "List of class members"
+    },
+    "/gallery/{galleryId}": {
+      "schema": { "$ref": "#/entities/GalleryItem" },
+      "description": "Gallery of class moments"
+    },
+    "/schedule/{scheduleId}": {
+      "schema": { "$ref": "#/entities/ScheduleItem" },
+      "description": "Class schedule"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Admin users"
+    }
+  }
+}

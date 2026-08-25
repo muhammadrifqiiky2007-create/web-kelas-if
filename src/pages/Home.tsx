@@ -30,7 +30,7 @@ export default function Home() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 font-medium text-sm mb-6"
         >
           <Sparkles size={16} />
-          Selamat Datang di Portal Kelas
+          Selamat Datang di Kelas Kami Tercinta
         </motion.div>
         
         <motion.h1 

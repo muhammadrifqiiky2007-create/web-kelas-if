@@ -42,7 +42,7 @@ function Sidebar() {
   
   const navItems = [
     { path: '/', label: 'Beranda', icon: <HomeIcon size={18} /> },
-    { path: '/members', label: 'Anggota Kelas', icon: <Users size={18} /> },
+    { path: '/members', label: 'Struktur Kelas', icon: <Users size={18} /> },
     { path: '/gallery', label: 'Galeri Momen', icon: <ImageIcon size={18} /> },
     { path: '/schedule', label: 'Jadwal Kuliah', icon: <Calendar size={18} /> },
   ];

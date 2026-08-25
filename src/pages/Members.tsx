@@ -75,8 +75,8 @@ export default function Members() {
     <div className="w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Anggota Kelas</h1>
-          <p className="text-slate-500">Mengenal lebih dekat teman-teman sekelas.</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Struktur Kelas</h1>
+          <p className="text-slate-500">Orang-Orang Hebat Di Dalam Kelas</p>
         </div>
         
         {isAdmin && (

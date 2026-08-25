@@ -1,43 +1,138 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './firebase';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, collection } from 'firebase/firestore';
+import { auth, db } from './firebase';
+
+interface ActiveSession {
+  id: string;
+  email: string;
+  device: string;
+  lastActive: any;
+}
 
 interface AuthContextType {
   user: User | null;
   isAdmin: boolean;
-  loading: boolean;
+  sessionId: string | null;
+  activeSessions: ActiveSession[];
+  logout: () => Promise<void>;
+  kickSession: (sessionIdToKick: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAdmin: false,
-  loading: true,
+  sessionId: null,
+  activeSessions: [],
+  logout: async () => {},
+  kickSession: async () => {},
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+
+  // Deteksi info perangkat sederhana
+  const getDeviceName = () => {
+    const ua = navigator.userAgent;
+    if (/android/i.test(ua)) return 'Android Device';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS Device';
+    if (/windows/i.test(ua)) return 'Windows PC';
+    if (/mac/i.test(ua)) return 'Mac OS';
+    if (/linux/i.test(ua)) return 'Linux PC';
+    return 'Unknown Device';
+  };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
+    let currentSessionId = localStorage.getItem('admin_session_id');
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+
+      if (currentUser) {
+        if (!currentSessionId) {
+          currentSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          localStorage.setItem('admin_session_id', currentSessionId);
+        }
+        setSessionId(currentSessionId);
+
+        // Catat sesi aktif di Firestore
+        const sessionRef = doc(db, 'active_sessions', currentSessionId);
+        await setDoc(sessionRef, {
+          email: currentUser.email || 'Admin',
+          device: getDeviceName(),
+          lastActive: serverTimestamp(),
+        }, { merge: true });
+
+        // Pantau jika sesi ini di-kick admin lain
+        const unsubscribeMySession = onSnapshot(doc(db, 'active_sessions', currentSessionId), (snapshot) => {
+          if (!snapshot.exists()) {
+            signOut(auth);
+            localStorage.removeItem('admin_session_id');
+            setSessionId(null);
+            alert('Akses Anda telah dikeluarkan (kick) oleh Admin lain.');
+          }
+        });
+
+        return () => unsubscribeMySession();
+      } else {
+        if (currentSessionId) {
+          await deleteDoc(doc(db, 'active_sessions', currentSessionId)).catch(() => {});
+          localStorage.removeItem('admin_session_id');
+        }
+        setSessionId(null);
+      }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
-  // For this application, we explicitly check if the user is the super admin based on email
-  // or if they are just logged in. As per firestore.rules, "muhammadrifqiiky2007@gmail.com" is super admin.
-  // Other users could be verified by fetching from the admins collection, but checking this email
-  // gives immediate UI feedback without an extra read for the creator.
-  const isAdmin = !!user;
+  // Real-time listener daftar sesi aktif
+  useEffect(() => {
+    if (!user) {
+      setActiveSessions([]);
+      return;
+    }
+
+    const unsubscribeList = onSnapshot(collection(db, 'active_sessions'), (snapshot) => {
+      const sessions: ActiveSession[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as ActiveSession[];
+      setActiveSessions(sessions);
+    });
+
+    return () => unsubscribeList();
+  }, [user]);
+
+  const logout = async () => {
+    const currentSessionId = localStorage.getItem('admin_session_id');
+    if (currentSessionId) {
+      await deleteDoc(doc(db, 'active_sessions', currentSessionId)).catch(() => {});
+      localStorage.removeItem('admin_session_id');
+    }
+    await signOut(auth);
+  };
+
+  const kickSession = async (sessionIdToKick: string) => {
+    await deleteDoc(doc(db, 'active_sessions', sessionIdToKick));
+  };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAdmin: !!user,
+        sessionId,
+        activeSessions,
+        logout,
+        kickSession,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);

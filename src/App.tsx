@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Users, Image as ImageIcon, Calendar, LogIn, LogOut, Shield, Home as HomeIcon, Settings } from 'lucide-react';
+import { Users, Image as ImageIcon, Calendar, LogIn, LogOut, Shield, Home as HomeIcon, Settings, Laptop, UserX } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { logOut, db } from './firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -20,10 +20,11 @@ import { SettingsModal } from './components/SettingsModal';
 
 function Sidebar() {
   const location = useLocation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, sessionId, activeSessions, kickSession } = useAuth();
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showDeviceList, setShowDeviceList] = useState(false);
   
   const [classInfo, setClassInfo] = useState({ className: "Vanguard '24", logoData: '' });
 
@@ -76,7 +77,7 @@ function Sidebar() {
         {isAdmin && (
           <div className="bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider py-1.5 px-4 text-center flex items-center justify-center gap-1">
             <Shield size={12} />
-            Admin Active
+            Admin Active ({activeSessions.length})
           </div>
         )}
       </nav>
@@ -111,15 +112,27 @@ function Sidebar() {
           </nav>
         </div>
         
-        <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
           {user ? (
             <>
               {isAdmin && (
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Admin Active</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      ADMIN ACTIVE ({activeSessions.length})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeviceList(!showDeviceList)}
+                    className="text-[10px] text-indigo-600 font-semibold hover:underline"
+                  >
+                    {showDeviceList ? 'Tutup' : 'Perangkat'}
+                  </button>
                 </div>
               )}
+
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold overflow-hidden">
                   {user.photoURL ? <img src={user.photoURL} alt="Admin" className="w-full h-full object-cover" /> : (user.email?.[0]?.toUpperCase() || 'A')}
@@ -138,6 +151,46 @@ function Sidebar() {
                   </div>
                 </div>
               </div>
+
+              {/* Daftar Perangkat & Fitur Kick */}
+              {showDeviceList && (
+                <div className="pt-2 border-t border-slate-200 space-y-2 max-h-40 overflow-y-auto">
+                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    Sesi Terhubung
+                  </p>
+                  {activeSessions.map((session) => {
+                    const isSelf = session.id === sessionId;
+                    return (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 text-[11px]"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Laptop size={12} className="text-slate-400 flex-shrink-0" />
+                          <div className="truncate">
+                            <p className="font-medium text-slate-700 truncate">{session.device}</p>
+                            {isSelf && (
+                              <span className="text-[9px] text-emerald-600 font-semibold">(Perangkat Ini)</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            onClick={() => kickSession(session.id)}
+                            title="Keluarkan Admin ini"
+                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors flex items-center gap-0.5 text-[10px] font-medium"
+                          >
+                            <UserX size={12} />
+                            <span>Kick</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center">

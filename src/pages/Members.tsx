@@ -26,7 +26,6 @@ export default function Members() {
     return () => unsubscribe();
   }, []);
 
-  // Fungsi penentu urutan prioritas jabatan
   const getRolePriority = (role?: string) => {
     switch (role?.toLowerCase()) {
       case 'ketua':
@@ -38,9 +37,18 @@ export default function Members() {
     }
   };
 
-  // Mengurutkan anggota: Ketua paling atas -> Wakil -> Anggota lain
   const sortedMembers = [...members].sort((a, b) => {
-    return getRolePriority(a.role) - getRolePriority(b.role);
+    const priorityA = getRolePriority(a.role);
+    const priorityB = getRolePriority(b.role);
+
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    const nimA = a.nim ? String(a.nim) : '';
+    const nimB = b.nim ? String(b.nim) : '';
+    
+    return nimA.localeCompare(nimB, undefined, { numeric: true });
   });
 
   const openAddModal = () => {

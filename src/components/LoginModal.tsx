@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, LogIn } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 
 export function LoginModal({ onClose }: { onClose: () => void }) {
-  const [email, setEmail] = useState('admin@kelas.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -68,7 +68,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
             <input
@@ -76,6 +76,8 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+              placeholder="Masukkan email"
+              autoComplete="off"
               required
             />
           </div>
@@ -87,6 +89,8 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+              placeholder="Masukkan password"
+              autoComplete="new-password"
               required
             />
           </div>

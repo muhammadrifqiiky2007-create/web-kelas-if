@@ -12,7 +12,7 @@ export interface Member {
   photoData: string;
   nim?: string;
   instagram?: string;
-  role?: string;
+  role?: 'ketua' | 'wakil' | 'anggota';
   createdAt: any;
   updatedAt: any;
 }

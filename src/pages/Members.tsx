@@ -26,6 +26,23 @@ export default function Members() {
     return () => unsubscribe();
   }, []);
 
+  // Fungsi penentu urutan prioritas jabatan
+  const getRolePriority = (role?: string) => {
+    switch (role?.toLowerCase()) {
+      case 'ketua':
+        return 1;
+      case 'wakil':
+        return 2;
+      default:
+        return 3;
+    }
+  };
+
+  // Mengurutkan anggota: Ketua paling atas -> Wakil -> Anggota lain
+  const sortedMembers = [...members].sort((a, b) => {
+    return getRolePriority(a.role) - getRolePriority(b.role);
+  });
+
   const openAddModal = () => {
     setEditingMember(null);
     setIsModalOpen(true);
@@ -74,7 +91,7 @@ export default function Members() {
             </div>
           ))}
         </div>
-      ) : members.length === 0 ? (
+      ) : sortedMembers.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
           <UserIcon size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">Belum ada anggota</h3>
@@ -83,7 +100,7 @@ export default function Members() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           <AnimatePresence>
-            {members.map((member) => (
+            {sortedMembers.map((member) => (
               <motion.div
                 key={member.id}
                 layout
@@ -94,7 +111,7 @@ export default function Members() {
                 className="bg-white rounded-3xl p-6 flex flex-col items-center text-center border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group"
               >
                 {isAdmin && (
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white/90 backdrop-blur rounded-full shadow-sm p-1">
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white/90 backdrop-blur rounded-full shadow-sm p-1 z-10">
                     <button onClick={() => openEditModal(member)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors">
                       <Edit2 size={14} />
                     </button>
@@ -114,11 +131,19 @@ export default function Members() {
                   )}
                 </div>
                 <h3 className="font-bold text-slate-900 text-lg w-full truncate">{member.name}</h3>
+                
                 {member.role && (
-                  <span className="inline-block px-2 py-0.5 mt-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-100">
-                    {member.role}
+                  <span className={`inline-block px-2.5 py-0.5 mt-1 text-xs font-semibold rounded-full border capitalize ${
+                    member.role === 'ketua' 
+                      ? 'bg-red-50 text-red-700 border-red-100' 
+                      : member.role === 'wakil' 
+                      ? 'bg-blue-50 text-blue-700 border-blue-100' 
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                  }`}>
+                    {member.role === 'ketua' ? 'Ketua Kelas' : member.role === 'wakil' ? 'Wakil Ketua' : member.role}
                   </span>
                 )}
+                
                 {member.nim && (
                   <p className="text-xs text-slate-500 mt-1">{member.nim}</p>
                 )}
@@ -152,7 +177,7 @@ function MemberModal({ member, onClose }: { member: Member | null, onClose: () =
   const [name, setName] = useState(member?.name || '');
   const [nim, setNim] = useState(member?.nim || '');
   const [instagram, setInstagram] = useState(member?.instagram || '');
-  const [role, setRole] = useState(member?.role || '');
+  const [role, setRole] = useState(member?.role || 'anggota');
   const [photoData, setPhotoData] = useState(member?.photoData || '');
   const [saving, setSaving] = useState(false);
   
@@ -266,15 +291,16 @@ function MemberModal({ member, onClose }: { member: Member | null, onClose: () =
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Kedudukan (Opsional)</label>
-              <input 
-                type="text" 
+              <label className="block text-sm font-medium text-slate-700 mb-1">Kedudukan / Jabatan</label>
+              <select 
                 value={role} 
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900"
-                placeholder="Misal: Ketua Kelas, Anggota"
-                maxLength={50}
-              />
+              >
+                <option value="anggota">Anggota</option>
+                <option value="ketua">Ketua Kelas</option>
+                <option value="wakil">Wakil Ketua</option>
+              </select>
             </div>
 
             <div>

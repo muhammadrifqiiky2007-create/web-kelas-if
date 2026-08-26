@@ -3,24 +3,39 @@ import { motion, AnimatePresence } from 'motion/react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../AuthContext';
-import { MemberDetailModal } from '../components/MemberDetailModal';
-import { UserPlus, Pencil, Trash2, X, Upload, Shield, Users } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, X, Upload, Shield, Users, Instagram, User } from 'lucide-react';
 import { compressImageToBase64 } from '../utils';
+
+// Helper Resolusi Gambar
+export const getMemberPhoto = (member: any): string => {
+  if (!member) return '';
+  const rawPath = member.photoUrl || member.photoData || member.photo || member.image || '';
+
+  if (!rawPath || typeof rawPath !== 'string') return '';
+
+  if (rawPath.startsWith('http') || rawPath.startsWith('data:image')) {
+    return rawPath;
+  }
+
+  const cleanPath = rawPath.replace(/^\/?(src\/)?/, '');
+  return `/${cleanPath}`;
+};
 
 export default function Members() {
   const { isAdmin } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
 
-  // Modal State Form Tambah/Edit
+  // Modal State Form
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   // Form State
   const [name, setName] = useState('');
   const [nim, setNim] = useState('');
   const [role, setRole] = useState('');
   const [photoData, setPhotoData] = useState('');
+  const [instagram, setInstagram] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [hobbies, setHobbies] = useState('');
@@ -37,16 +52,15 @@ export default function Members() {
     return unsub;
   }, []);
 
-  // Pemisah Pengurus & Anggota + Pengurutan NIM
   const coreRoles = ['ketua', 'wakil', 'sekretaris', 'bendahara'];
-  
+
   const leaders = members
     .filter((m) => m.role && m.role.trim() !== '')
     .sort((a, b) => {
       const roleA = a.role.toLowerCase();
       const roleB = b.role.toLowerCase();
-      const indexA = coreRoles.findIndex(r => roleA.includes(r));
-      const indexB = coreRoles.findIndex(r => roleB.includes(r));
+      const indexA = coreRoles.findIndex((r) => roleA.includes(r));
+      const indexB = coreRoles.findIndex((r) => roleB.includes(r));
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       if (indexA !== -1) return -1;
       if (indexB !== -1) return 1;
@@ -68,6 +82,7 @@ export default function Members() {
     setNim('');
     setRole('');
     setPhotoData('');
+    setInstagram('');
     setEmail('');
     setPhone('');
     setHobbies('');
@@ -82,6 +97,7 @@ export default function Members() {
     setNim(member.nim || '');
     setRole(member.role || '');
     setPhotoData(member.photoUrl || member.photoData || '');
+    setInstagram(member.instagram || member.ig || '');
     setEmail(member.email || '');
     setPhone(member.phone || '');
     setHobbies(member.hobbies || '');
@@ -120,6 +136,7 @@ export default function Members() {
       role,
       photoData,
       photoUrl: photoData,
+      instagram: instagram.replace(/^@/, '').trim(),
       email,
       phone,
       hobbies,
@@ -140,11 +157,12 @@ export default function Members() {
 
   return (
     <div className="space-y-10 pb-12">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200/80 pb-6 pt-2">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900">Anggota Kelas</h1>
-          <p className="text-sm text-slate-500 mt-1">Klik pada anggota untuk melihat detail profil lengkap.</p>
+          <p className="text-sm text-slate-500 mt-1">
+            Klik pada anggota untuk melihat detail profil lengkap.
+          </p>
         </div>
 
         {isAdmin && (
@@ -158,7 +176,6 @@ export default function Members() {
         )}
       </div>
 
-      {/* Section 1: Pengurus Kelas */}
       {leaders.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm tracking-wider uppercase">
@@ -180,7 +197,6 @@ export default function Members() {
         </section>
       )}
 
-      {/* Section 2: Anggota Kelas (Urut NIM) */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 text-slate-700 font-bold text-sm tracking-wider uppercase">
           <Users size={18} />
@@ -200,13 +216,10 @@ export default function Members() {
         </div>
       </section>
 
-      {/* Modal Detail Profil Anggota */}
-      <MemberDetailModal
-        member={selectedMember}
-        onClose={() => setSelectedMember(null)}
-      />
+      {/* Internal Modal Detail Profil */}
+      <DetailModal member={selectedMember} onClose={() => setSelectedMember(null)} />
 
-      {/* Modal Form Tambah/Edit (Admin Only) */}
+      {/* Modal Form Tambah/Edit */}
       <AnimatePresence>
         {isFormOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
@@ -232,7 +245,11 @@ export default function Members() {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Foto Anggota</label>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-slate-400">
-                      {photoData ? <img src={photoData} alt="Preview" className="w-full h-full object-cover" /> : '?'}
+                      {photoData ? (
+                        <img src={photoData} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        '?'
+                      )}
                     </div>
                     <label className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-700 w-full">
                       <Upload size={16} />
@@ -265,15 +282,30 @@ export default function Members() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Jabatan / Peran (Opsional)</label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: Ketua Kelas, Wakil, Bendahara"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Jabatan / Peran (Opsional)</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Ketua Kelas"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Username Instagram (Opsional)</label>
+                    <div className="relative">
+                      <Instagram size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Baru1234_"
+                        value={instagram}
+                        onChange={(e) => setInstagram(e.target.value)}
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -354,7 +386,22 @@ function MemberCard({
   onEdit: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
-  const imageSrc = member.photoUrl || member.photoData;
+  const [imgSrc, setImgSrc] = useState<string>(getMemberPhoto(member));
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(getMemberPhoto(member));
+    setHasError(false);
+  }, [member]);
+
+  const handleImageError = () => {
+    if (!hasError && member.nim) {
+      setImgSrc(`/images/${member.nim}.jpg`);
+      setHasError(true);
+    } else {
+      setHasError(true);
+    }
+  };
 
   return (
     <motion.div
@@ -379,12 +426,17 @@ function MemberCard({
         </div>
       )}
 
-      <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-indigo-500 transition-colors">
-        {imageSrc ? (
-          <img src={imageSrc} alt={member.name} className="w-full h-full object-cover" />
+      <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-indigo-500 transition-colors shrink-0 flex items-center justify-center">
+        {imgSrc && !hasError ? (
+          <img
+            src={imgSrc}
+            alt={member.name}
+            className="w-full h-full object-cover"
+            onError={handleImageError}
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center font-bold text-slate-400 text-xl">
-            {member.name ? member.name.charAt(0) : '?'}
+          <div className="w-full h-full flex items-center justify-center font-bold text-slate-400 text-xl bg-slate-100">
+            {member.name ? member.name.charAt(0).toUpperCase() : '?'}
           </div>
         )}
       </div>
@@ -400,5 +452,110 @@ function MemberCard({
         </span>
       )}
     </motion.div>
+  );
+}
+
+function DetailModal({ member, onClose }: { member: any | null; onClose: () => void }) {
+  if (!member) return null;
+
+  const [imgSrc, setImgSrc] = useState<string>(getMemberPhoto(member));
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(getMemberPhoto(member));
+    setHasError(false);
+  }, [member]);
+
+  const handleImageError = () => {
+    if (!hasError && member.nim) {
+      setImgSrc(`/images/${member.nim}.jpg`);
+      setHasError(true);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  const instagramUsername = member.instagram || member.ig || '';
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative border border-slate-100 my-8"
+        >
+          {/* Tombol Close */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/80 backdrop-blur-md text-slate-700 hover:text-slate-900 flex items-center justify-center shadow-md transition-colors"
+          >
+            <X size={20} />
+          </button>
+
+          {/* Area Header dengan Foto Background Blurred */}
+          <div className="relative bg-slate-900 p-8 flex justify-center items-center min-h-[220px] overflow-hidden">
+            {/* Background Image Blurred */}
+            {imgSrc && !hasError && (
+              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <img
+                  src={imgSrc}
+                  alt="Background Blur"
+                  className="w-full h-full object-cover blur-md scale-110 opacity-60"
+                />
+                {/* Overlay transparan agar foto utama tetap jelas */}
+                <div className="absolute inset-0 bg-slate-900/20" />
+              </div>
+            )}
+
+            {/* Foto Utama Profil (Foreground) */}
+            <div className="relative z-10 w-32 h-32 rounded-3xl overflow-hidden bg-white/20 border-4 border-white shadow-2xl flex items-center justify-center text-white shrink-0">
+              {imgSrc && !hasError ? (
+                <img
+                  src={imgSrc}
+                  alt={member.name}
+                  className="w-full h-full object-cover"
+                  onError={handleImageError}
+                />
+              ) : (
+                <User size={56} />
+              )}
+            </div>
+          </div>
+
+          {/* Body Detail Informasi */}
+          <div className="p-6 space-y-4 bg-white relative z-10">
+            <div>
+              {member.role && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold mb-2">
+                  <Shield size={12} />
+                  {member.role}
+                </span>
+              )}
+              <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                {member.name || 'Tanpa Nama'}
+              </h2>
+              {member.nim && (
+                <p className="text-sm font-medium text-slate-500 mt-1"># NIM: {member.nim}</p>
+              )}
+            </div>
+
+            {/* Tombol Instagram */}
+            {instagramUsername && (
+              <a
+                href={`https://instagram.com/${instagramUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white font-semibold text-sm shadow-md hover:opacity-95 transition-opacity"
+              >
+                <Instagram size={18} />
+                <span>@{instagramUsername}</span>
+              </a>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }

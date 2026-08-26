@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Upload, Settings, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Settings } from 'lucide-react';
 import { getAuth, updateEmail, updatePassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -9,7 +9,6 @@ import { compressImageToBase64 } from '../utils';
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [className, setClassName] = useState('');
   const [logoData, setLogoData] = useState('');
-  const [bannerData, setBannerData] = useState('');
   const [homeTitle, setHomeTitle] = useState('');
   const [homeSubtitle, setHomeSubtitle] = useState('');
   
@@ -28,7 +27,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           const data = docSnap.data();
           setClassName(data.className || '');
           setLogoData(data.logoData || '');
-          setBannerData(data.bannerData || '');
           setHomeTitle(data.homeTitle || '');
           setHomeSubtitle(data.homeSubtitle || '');
         }
@@ -51,18 +49,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const base64 = await compressImageToBase64(file);
-        setBannerData(base64);
-      } catch (error) {
-        console.error("Failed to compress banner image", error);
-      }
-    }
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -73,7 +59,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       await setDoc(doc(db, 'settings', 'class_info'), {
         className,
         logoData,
-        bannerData,
         homeTitle,
         homeSubtitle
       }, { merge: true });
@@ -158,28 +143,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                     </label>
                   </div>
-                </div>
-              </div>
-
-              {/* Input Banner Foto Sekelas */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Banner Foto Sekelas</label>
-                <div className="space-y-2">
-                  <div className="w-full h-32 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
-                    {bannerData ? (
-                      <img src={bannerData} alt="Banner Sekelas" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center text-slate-400 gap-1">
-                        <ImageIcon size={24} />
-                        <span className="text-xs">Belum ada foto banner</span>
-                      </div>
-                    )}
-                  </div>
-                  <label className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700">
-                    <Upload size={16} />
-                    <span>Ubah Banner Sekelas</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
-                  </label>
                 </div>
               </div>
 

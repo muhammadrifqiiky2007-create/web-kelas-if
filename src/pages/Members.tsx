@@ -458,13 +458,13 @@ function MemberCard({
 function DetailModal({ member, onClose }: { member: any | null; onClose: () => void }) {
   if (!member) return null;
 
-  const [imgSrc, setImgSrc] = useState<string>(getMemberPhoto(member));
+  const [imgSrc, setImgSrc] = useState<string>(() => getMemberPhoto(member));
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     setImgSrc(getMemberPhoto(member));
     setHasError(false);
-  }, [member]);
+  }, [member?.id]);
 
   const handleImageError = () => {
     if (!hasError && member.nim) {
@@ -478,14 +478,17 @@ function DetailModal({ member, onClose }: { member: any | null; onClose: () => v
   const instagramUsername = member.instagram || member.ig || '';
 
   return (
-    <AnimatePresence mode="wait">
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+    <AnimatePresence>
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 overflow-y-auto"
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 15 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.8 }}
-          style={{ willChange: 'transform, opacity' }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          onClick={(e) => e.stopPropagation()}
           className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative border border-slate-100 my-8 transform-gpu"
         >
           {/* Tombol Close */}
@@ -496,28 +499,28 @@ function DetailModal({ member, onClose }: { member: any | null; onClose: () => v
             <X size={20} />
           </button>
 
-          {/* Header Foto Profil dengan Background Optimised */}
+          {/* Header Foto Profil */}
           <div className="relative bg-slate-900 p-8 flex justify-center items-center min-h-[220px] overflow-hidden">
-            {/* Background Image Blurred (Ringan & Hardware Accelerated) */}
+            {/* Background Blur Optimised */}
             {imgSrc && !hasError && (
-              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none transform-gpu">
+              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <img
                   src={imgSrc}
                   alt=""
-                  loading="eager"
-                  className="w-full h-full object-cover blur-[12px] scale-110 opacity-50 transform-gpu"
-                  style={{ willChange: 'filter, transform' }}
+                  decoding="async"
+                  className="w-full h-full object-cover blur-md scale-110 opacity-50 transform-gpu"
                 />
                 <div className="absolute inset-0 bg-slate-900/30" />
               </div>
             )}
 
             {/* Foto Profil Utama */}
-            <div className="relative z-10 w-32 h-32 rounded-3xl overflow-hidden bg-white/20 border-4 border-white shadow-2xl flex items-center justify-center text-white shrink-0 transform-gpu">
+            <div className="relative z-10 w-32 h-32 rounded-3xl overflow-hidden bg-slate-800 border-4 border-white shadow-2xl flex items-center justify-center text-white shrink-0 transform-gpu">
               {imgSrc && !hasError ? (
                 <img
                   src={imgSrc}
                   alt={member.name}
+                  decoding="async"
                   className="w-full h-full object-cover"
                   onError={handleImageError}
                 />
@@ -544,7 +547,6 @@ function DetailModal({ member, onClose }: { member: any | null; onClose: () => v
               )}
             </div>
 
-            {/* Tombol Instagram */}
             {instagramUsername && (
               <a
                 href={`https://instagram.com/${instagramUsername}`}

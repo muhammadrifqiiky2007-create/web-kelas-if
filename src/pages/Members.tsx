@@ -478,39 +478,42 @@ function DetailModal({ member, onClose }: { member: any | null; onClose: () => v
   const instagramUsername = member.instagram || member.ig || '';
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <AnimatePresence mode="wait">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative border border-slate-100 my-8"
+          initial={{ opacity: 0, scale: 0.9, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 15 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.8 }}
+          style={{ willChange: 'transform, opacity' }}
+          className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative border border-slate-100 my-8 transform-gpu"
         >
           {/* Tombol Close */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/80 backdrop-blur-md text-slate-700 hover:text-slate-900 flex items-center justify-center shadow-md transition-colors"
+            className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/80 text-slate-700 hover:text-slate-900 flex items-center justify-center shadow-md transition-colors"
           >
             <X size={20} />
           </button>
 
-          {/* Area Header dengan Foto Background Blurred */}
+          {/* Header Foto Profil dengan Background Optimised */}
           <div className="relative bg-slate-900 p-8 flex justify-center items-center min-h-[220px] overflow-hidden">
-            {/* Background Image Blurred */}
+            {/* Background Image Blurred (Ringan & Hardware Accelerated) */}
             {imgSrc && !hasError && (
-              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none transform-gpu">
                 <img
                   src={imgSrc}
-                  alt="Background Blur"
-                  className="w-full h-full object-cover blur-md scale-110 opacity-60"
+                  alt=""
+                  loading="eager"
+                  className="w-full h-full object-cover blur-[12px] scale-110 opacity-50 transform-gpu"
+                  style={{ willChange: 'filter, transform' }}
                 />
-                {/* Overlay transparan agar foto utama tetap jelas */}
-                <div className="absolute inset-0 bg-slate-900/20" />
+                <div className="absolute inset-0 bg-slate-900/30" />
               </div>
             )}
 
-            {/* Foto Utama Profil (Foreground) */}
-            <div className="relative z-10 w-32 h-32 rounded-3xl overflow-hidden bg-white/20 border-4 border-white shadow-2xl flex items-center justify-center text-white shrink-0">
+            {/* Foto Profil Utama */}
+            <div className="relative z-10 w-32 h-32 rounded-3xl overflow-hidden bg-white/20 border-4 border-white shadow-2xl flex items-center justify-center text-white shrink-0 transform-gpu">
               {imgSrc && !hasError ? (
                 <img
                   src={imgSrc}
@@ -524,7 +527,7 @@ function DetailModal({ member, onClose }: { member: any | null; onClose: () => v
             </div>
           </div>
 
-          {/* Body Detail Informasi */}
+          {/* Informasi Anggota */}
           <div className="p-6 space-y-4 bg-white relative z-10">
             <div>
               {member.role && (
